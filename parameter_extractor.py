@@ -1,33 +1,38 @@
 import re
+import numpy as np
 import rdkit.Chem as Chem
 from rdkit.Chem import rdMolTransforms
 
 
 class ParameterExtractor:
-    __pdb = None
     __out = None
     __atom_list = []
-    __conformer = None
-    p1 = None
-    p2 = None
-    r1 = None
-    r2 = None
-    bridge = None
-    rh = None
-    homo = None
-    lumo = None
-    dipole = None
+    __conformer: Chem.Conformer = None
+    mol: Chem.Mol = None
+    p1: Chem.Atom = None
+    p2: Chem.Atom = None
+    r1: Chem.Atom = None
+    r2: Chem.Atom = None
+    r3: Chem.Atom = None
+    r4: Chem.Atom = None
+    bridge: Chem.Atom = None
+    rh: Chem.Atom = None
+    homo: float = None
+    lumo: float = None
+    dipole: float = None
 
     def __init__(self, filename: str):
         with open(f"./out/{filename}.out") as f:
             self.__out = f.readlines()
-        self.__pdb = Chem.MolFromPDBFile(f"./pdb/{filename}.pdb", removeHs=False)
-        self.__conformer = self.__pdb.GetConformer()
-        self.__atom_list = self.__pdb.GetAtoms()
+        self.mol = Chem.MolFromPDBFile(f"./pdb/{filename}.pdb", removeHs=False)
+        self.__conformer = self.mol.GetConformer()
+        self.__atom_list = self.mol.GetAtoms()
         self.__set_nbo_prop()
         self.p1, self.p2 = self.__get_phosphorus()
         self.rh = next(atom for atom in self.__atom_list if atom.GetSymbol() == "Rh")
         self.bridge = self.__get_bridge()
+        self.r1, self.r2 = self.__get_p_substituents(self.p1)
+        self.r3, self.r4 = self.__get_p_substituents(self.p2)
         self.homo, self.lumo = self.__get_homo_lumo()
         self.dipole = self.__get_dipole()
 
@@ -113,4 +118,42 @@ class ParameterExtractor:
         return rdMolTransforms.GetAngleDeg(self.__conformer, atom_1.GetIdx(), atom_2.GetIdx(), atom_3.GetIdx())
 
     def getTorsionAngle(self, atom_1: Chem.Atom, atom_2: Chem.Atom, atom_3: Chem.Atom, atom_4: Chem.Atom) -> float:
-        return rdMolTransforms.GetDihedralDeg(self.__conformer, atom_1.GetIdx(), atom_2.GetIdx(), atom_3.GetIdx(), atom_4.GetIdx())
+        return rdMolTransforms.GetDihedralDeg(
+            self.__conformer,
+            atom_1.GetIdx(),
+            atom_2.GetIdx(),
+            atom_3.GetIdx(),atom_4.GetIdx()
+        )
+
+    def __distance_to_plane(self, atom: Chem.Atom) -> float:
+        # Get the coordinates of the three atoms defining the plane
+        coords = self.mol.GetConformer().GetPositions()
+
+        p1 = coords[self.p1.GetIdx()]
+        p2 = coords[self.p2.GetIdx()]
+        rh = coords[self.rh.GetIdx()]
+
+        # Calculate the normal vector of the plane
+        v1 = p2 - p1
+        v2 = rh - p1
+        normal = np.cross(v1, v2)
+
+        # Normalize the normal vector
+        normal = normal / np.linalg.norm(normal)
+
+        # Get the coordinate of the atom to evaluate
+        p_atom = coords[atom.GetIdx()]
+
+        # Calculate the point-plane distance
+        d = np.dot(normal, p_atom - p1)
+
+        return d
+
+    def __get_p_substituents(self, p: Chem.Atom) -> (Chem.Atom, Chem.Atom):
+        substituents = list(filter(lambda x: x.GetIdx() != self.bridge.GetIdx(), p.GetNeighbors()))
+        r1, r2 = sorted(substituents, key=lambda x: self.__distance_to_plane(x))
+        return r1, r2
+
+
+class AtomOnPlaneException(Exception):
+    pass
