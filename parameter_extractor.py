@@ -17,6 +17,11 @@ class ParameterExtractor:
     r4: Chem.Atom = None
     bridge: Chem.Atom = None
     rh: Chem.Atom = None
+    cod: list[Chem.Atom] = None
+    c1: Chem.Atom = None
+    c2: Chem.Atom = None
+    c3: Chem.Atom = None
+    c4: Chem.Atom = None
     homo: float = None
     lumo: float = None
     dipole: float = None
@@ -35,6 +40,8 @@ class ParameterExtractor:
         self.r3, self.r4 = self.__get_p_substituents(self.p2)
         self.homo, self.lumo = self.__get_homo_lumo()
         self.dipole = self.__get_dipole()
+        self.cod = self.__get_cod()
+        self.c1, self.c2, self.c3, self.c4 = self.__get_c_substituents()
 
     def __extract_blocks_from_out(
             self,
@@ -111,21 +118,21 @@ class ParameterExtractor:
         bridge_idx = list(p1_neighbors.intersection(p2_neighbors))[0]
         return next(atom for atom in self.__atom_list if atom.GetIdx() == bridge_idx)
 
-    def getBondDistance(self, atom_1: Chem.Atom, atom_2: Chem.Atom) -> float:
+    def get_bond_distance(self, atom_1: Chem.Atom, atom_2: Chem.Atom) -> float:
         return rdMolTransforms.GetBondLength(self.__conformer, atom_1.GetIdx(), atom_2.GetIdx())
 
-    def getAngle(self, atom_1: Chem.Atom, atom_2: Chem.Atom, atom_3: Chem.Atom) -> float:
+    def get_angle(self, atom_1: Chem.Atom, atom_2: Chem.Atom, atom_3: Chem.Atom) -> float:
         return rdMolTransforms.GetAngleDeg(self.__conformer, atom_1.GetIdx(), atom_2.GetIdx(), atom_3.GetIdx())
 
-    def getTorsionAngle(self, atom_1: Chem.Atom, atom_2: Chem.Atom, atom_3: Chem.Atom, atom_4: Chem.Atom) -> float:
+    def get_torsion_angle(self, atom_1: Chem.Atom, atom_2: Chem.Atom, atom_3: Chem.Atom, atom_4: Chem.Atom) -> float:
         return rdMolTransforms.GetDihedralDeg(
             self.__conformer,
             atom_1.GetIdx(),
             atom_2.GetIdx(),
-            atom_3.GetIdx(),atom_4.GetIdx()
+            atom_3.GetIdx(), atom_4.GetIdx()
         )
 
-    def __distance_to_plane(self, atom: Chem.Atom) -> float:
+    def distance_to_plane(self, atom: Chem.Atom) -> float:
         # Get the coordinates of the three atoms defining the plane
         coords = self.mol.GetConformer().GetPositions()
 
@@ -151,9 +158,40 @@ class ParameterExtractor:
 
     def __get_p_substituents(self, p: Chem.Atom) -> (Chem.Atom, Chem.Atom):
         substituents = list(filter(lambda x: x.GetIdx() != self.bridge.GetIdx(), p.GetNeighbors()))
-        r1, r2 = sorted(substituents, key=lambda x: self.__distance_to_plane(x))
+        r1, r2 = sorted(substituents, key=lambda x: self.distance_to_plane(x))
         return r1, r2
+
+    def __get_cod(self) -> list[Chem.Atom]:
+        cod = Chem.MolFromSmiles("C1CC=CCCC=C1")
+        cyclooctane = Chem.MolFromSmiles("C1CCCCCCC1")  # Pdb conversions shows structure of COD as single bonds
+
+        cod_carbons = self.mol.GetSubstructMatch(cod)
+        if len(cod_carbons) == 0:
+            cod_carbons = self.mol.GetSubstructMatch(cyclooctane)
+        cod_carbons = [self.mol.GetAtomWithIdx(c) for c in cod_carbons]
+        cod_atoms = cod_carbons
+        for c in cod_carbons:
+            cod_hydrogens = [h for h in c.GetNeighbors() if h.GetSymbol() == "H"]
+            cod_atoms.extend(cod_hydrogens)
+
+        return cod_atoms
+
+    def __get_c_substituents(self) -> (Chem.Atom, Chem.Atom, Chem.Atom, Chem.Atom):
+        cod_rh = [a for a in self.rh.GetNeighbors() if a.GetSymbol() == "C"]
+        cod_c_info = [
+            (c, self.get_bond_distance(self.p1, c), self.distance_to_plane(c), self.get_angle(self.p1, self.rh, c)) for
+            c in cod_rh]
+        angle_sorted = sorted(cod_c_info, key=lambda x: x[3], reverse=True)
+        plane_distance_sorted = sorted(angle_sorted[:2], key=lambda x: x[2], reverse=True)
+        c1, c2 = list(map(lambda x: x[0], plane_distance_sorted))
+        plane_distance_sorted = sorted(angle_sorted[2:], key=lambda x: x[2], reverse=True)
+        c3, c4 = list(map(lambda x: x[0], plane_distance_sorted))
+        return c1, c2, c3, c4
 
 
 class AtomOnPlaneException(Exception):
     pass
+
+
+if __name__ == "__main__":
+    comp = ParameterExtractor("l_49")
