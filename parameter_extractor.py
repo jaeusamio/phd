@@ -1,5 +1,6 @@
 import re
 import numpy as np
+from enum import Enum
 import rdkit.Chem as Chem
 from openbabel import pybel
 from rdkit.Chem import rdMolTransforms
@@ -38,6 +39,7 @@ class ParameterExtractor:
         self.__conformer = self.mol.GetConformer()
         self.__atom_list = self.mol.GetAtoms()
         self.__set_nbo_prop()
+        self.__set_bond_prop()
         self.p1, self.p2 = self.__get_phosphorus()
         self.rh = next(atom for atom in self.__atom_list if atom.GetSymbol() == "Rh")
         self.bridge = self.__get_bridge()
@@ -81,8 +83,8 @@ class ParameterExtractor:
         return orbital_blocks
 
     def __extract_bond_occupancy_blocks(self) -> list[list[str]]:
-        start_pattern = r"\(Occupancy\)   Bond orbital\/ Coefficients\/ Hybrids"
-        end_pattern = r"\n\n\n"
+        start_pattern = r"Natural Bond Orbitals \(Summary\)\:"
+        end_pattern = r"NATURAL LOCALIZED MOLECULAR ORBITAL \(NLMO\) ANALYSIS"
         bond_occupancy_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern)
         return bond_occupancy_blocks
 
@@ -100,8 +102,41 @@ class ParameterExtractor:
                 pattern = fr"{_atom_symbol}\s+{_atom_idx}.+?\d"
                 if re.search(pattern, line):
                     _atom_nbo = str.split(line)[2]
-                    atom.SetProp("NBO", _atom_nbo)
+                    atom.SetProp(Property.CHARGE.value, _atom_nbo)
                     break
+
+    def __set_bond_prop(self) -> None:
+        bond_occupancy_blocks = self.__extract_bond_occupancy_blocks()
+
+        for bond in self.mol.GetBonds():
+            found = None
+            begin_atom = bond.GetBeginAtom()
+            end_atom = bond.GetEndAtom()
+            atom_symbol_begin = begin_atom.GetSymbol()
+            atom_idx_begin = begin_atom.GetIdx() + 1
+            atom_symbol_end = end_atom.GetSymbol()
+            atom_idx_end = end_atom.GetIdx() + 1
+
+            pattern_1 = fr"BD\s+\(\s+1\)\s*{atom_symbol_begin}\s+{atom_idx_begin}\s+\-\s*{atom_symbol_end}\s+{atom_idx_end}"
+            pattern_2 = fr"BD\s+\(\s+1\)\s*{atom_symbol_end}\s+{atom_idx_end}\s+\-\s*{atom_symbol_begin}\s+{atom_idx_begin}"
+
+            for line in bond_occupancy_blocks[-1]:
+                if re.search(pattern_1, line):
+                    bond_occupancy = str.split(line)[-3]
+                    bond_energy = str.split(line)[-2]
+                    bond.SetProp(Property.OCCUPANCY.value, bond_occupancy)
+                    bond.SetProp(Property.ENERGY.value, bond_energy)
+                    found = True
+                    break
+                elif re.search(pattern_2, line):
+                    bond_occupancy = str.split(line)[-3]
+                    bond_energy = str.split(line)[-2]
+                    bond.SetProp(Property.OCCUPANCY.value, bond_occupancy)
+                    bond.SetProp(Property.ENERGY.value, bond_energy)
+                    found = True
+                    break
+            if not found:
+                print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Bond not found")
 
     def __get_homo_lumo(self) -> (float, float):
         orbital_blocks = self.__extract_orbital_blocks()
@@ -121,7 +156,7 @@ class ParameterExtractor:
 
     def __get_phosphorus(self) -> (Chem.Atom, Chem.Atom):
         p_list = list(filter(lambda x: x.GetSymbol() == "P", self.__atom_list))
-        return sorted(p_list, key=lambda x: float(x.GetProp("NBO")), reverse=True)
+        return sorted(p_list, key=lambda x: float(x.GetProp(Property.CHARGE.value)), reverse=True)
 
     def __get_bridge(self) -> Chem.Atom:
         p1_neighbors = set(map(lambda x: x.GetIdx(), self.p1.GetNeighbors()))
@@ -201,6 +236,12 @@ class ParameterExtractor:
         plane_distance_sorted = sorted(angle_sorted[2:], key=lambda x: x[2], reverse=True)
         c3, c4 = list(map(lambda x: x[0], plane_distance_sorted))
         return c1, c2, c3, c4
+
+
+class Property(Enum):
+    CHARGE = "nbo_charge"
+    OCCUPANCY = "bond_occupancy"
+    ENERGY = "bond_energy"
 
 
 class AtomOnPlaneException(Exception):
