@@ -1,7 +1,9 @@
 import re
 import numpy as np
 import rdkit.Chem as Chem
+from openbabel import pybel
 from rdkit.Chem import rdMolTransforms
+from rdkit.Chem import rdDetermineBonds
 
 
 class ParameterExtractor:
@@ -27,9 +29,12 @@ class ParameterExtractor:
     dipole: float = None
 
     def __init__(self, filename: str):
-        with open(f"./out/{filename}.out") as f:
+        with open(f"./out/spe/{filename}.out") as f:
             self.__out = f.readlines()
-        self.mol = Chem.MolFromPDBFile(f"./pdb/{filename}.pdb", removeHs=False)
+        mol = next(pybel.readfile("out", f"./out/spe/{filename}.out"))
+        xyz = mol.write("xyz")
+        self.mol = Chem.MolFromXYZBlock(xyz)
+        rdDetermineBonds.DetermineConnectivity(self.mol)
         self.__conformer = self.mol.GetConformer()
         self.__atom_list = self.mol.GetAtoms()
         self.__set_nbo_prop()
@@ -74,6 +79,12 @@ class ParameterExtractor:
         end_pattern = r"Condensed to atoms \(all electrons\)"
         orbital_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern)
         return orbital_blocks
+
+    def __extract_bond_occupancy_blocks(self) -> list[list[str]]:
+        start_pattern = r"\(Occupancy\)   Bond orbital\/ Coefficients\/ Hybrids"
+        end_pattern = r"\n\n\n"
+        bond_occupancy_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern)
+        return bond_occupancy_blocks
 
     def __get_dipole(self) -> float:
         dipole = [line for line in self.__out if re.search(" X= ", line)][-1]
@@ -157,7 +168,10 @@ class ParameterExtractor:
         return d
 
     def __get_p_substituents(self, p: Chem.Atom) -> (Chem.Atom, Chem.Atom):
-        substituents = list(filter(lambda x: x.GetIdx() != self.bridge.GetIdx(), p.GetNeighbors()))
+        substituents = list(filter(
+            lambda x: x.GetIdx() != self.bridge.GetIdx() and x.GetIdx() != self.rh.GetIdx(),
+            p.GetNeighbors())
+        )
         r1, r2 = sorted(substituents, key=lambda x: self.distance_to_plane(x))
         return r1, r2
 
@@ -194,4 +208,4 @@ class AtomOnPlaneException(Exception):
 
 
 if __name__ == "__main__":
-    comp = ParameterExtractor("l_49")
+    comp = ParameterExtractor("l_2_SPE")
