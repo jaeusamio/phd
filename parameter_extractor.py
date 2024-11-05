@@ -38,8 +38,10 @@ class ParameterExtractor:
         rdDetermineBonds.DetermineConnectivity(self.mol)
         self.__conformer = self.mol.GetConformer()
         self.__atom_list = self.mol.GetAtoms()
-        self.__set_nbo_prop()
+        self.__set_charge_prop()
         self.__set_bond_prop()
+        self.__set_antibond_prop()
+        self.__set_nmr_property()
         self.p1, self.p2 = self.__get_phosphorus()
         self.rh = next(atom for atom in self.__atom_list if atom.GetSymbol() == "Rh")
         self.bridge = self.__get_bridge()
@@ -70,7 +72,7 @@ class ParameterExtractor:
                 end_line = None
         return blocks
 
-    def __extract_nbo_blocks(self) -> list[list[str]]:
+    def __extract_nbo_charge_blocks(self) -> list[list[str]]:
         start_pattern = r"Summary of Natural Population Analysis\:"
         end_pattern = r"\* Total \*"
         nbo_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, include_last_line=True)
@@ -81,6 +83,12 @@ class ParameterExtractor:
         end_pattern = r"Condensed to atoms \(all electrons\)"
         orbital_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern)
         return orbital_blocks
+
+    def __extract_nmr_blocks(self) -> list[list[str]]:
+        start_pattern = r"SCF GIAO Magnetic shielding tensor \(ppm\)\:"
+        end_pattern = r"End of Minotr"
+        nmr_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern)
+        return nmr_blocks
 
     def __extract_bond_occupancy_blocks(self) -> list[list[str]]:
         start_pattern = r"Natural Bond Orbitals \(Summary\)\:"
@@ -93,17 +101,30 @@ class ParameterExtractor:
         if str.split(dipole)[-2] == "Tot=":
             return float(str.split(dipole)[-1])
 
-    def __set_nbo_prop(self) -> None:
-        nbo_blocks = self.__extract_nbo_blocks()
+    def __set_charge_prop(self) -> None:
+        charge_blocks = self.__extract_nbo_charge_blocks()
         for atom in self.__atom_list:
             _atom_idx = str(atom.GetIdx() + 1)
             _atom_symbol = atom.GetSymbol()
-            for line in nbo_blocks[-1]:
+            for line in charge_blocks[-1]:
                 pattern = fr"{_atom_symbol}\s+{_atom_idx}.+?\d"
                 if re.search(pattern, line):
                     _atom_nbo = str.split(line)[2]
                     atom.SetProp(Property.CHARGE.value, _atom_nbo)
                     break
+
+    def __set_nmr_property(self) -> None:
+        nmr_blocks = self.__extract_nmr_blocks()
+        for atom in self.__atom_list:
+            atom_idx = str(atom.GetIdx() + 1)
+            atom_symbol = atom.GetSymbol()
+            for line in nmr_blocks[-1]:
+                pattern = fr"{atom_idx}\s+{atom_symbol}\s+Isotropic"
+                if re.search(pattern, line):
+                    _atom_nmr_isotropic = line.split()[-4]
+                    _atom_nmr_anisotropic = line.split()[-1]
+                    atom.SetProp(Property.NMR_ISOTROPIC.value, _atom_nmr_isotropic)
+                    atom.SetProp(Property.NMR_ANISOTROPIC.value, _atom_nmr_anisotropic)
 
     def __set_bond_prop(self) -> None:
         bond_occupancy_blocks = self.__extract_bond_occupancy_blocks()
@@ -124,19 +145,52 @@ class ParameterExtractor:
                 if re.search(pattern_1, line):
                     bond_occupancy = str.split(line)[-3]
                     bond_energy = str.split(line)[-2]
-                    bond.SetProp(Property.OCCUPANCY.value, bond_occupancy)
-                    bond.SetProp(Property.ENERGY.value, bond_energy)
+                    bond.SetProp(Property.BOND_OCCUPANCY.value, bond_occupancy)
+                    bond.SetProp(Property.BOND_ENERGY.value, bond_energy)
                     found = True
                     break
                 elif re.search(pattern_2, line):
                     bond_occupancy = str.split(line)[-3]
                     bond_energy = str.split(line)[-2]
-                    bond.SetProp(Property.OCCUPANCY.value, bond_occupancy)
-                    bond.SetProp(Property.ENERGY.value, bond_energy)
+                    bond.SetProp(Property.BOND_OCCUPANCY.value, bond_occupancy)
+                    bond.SetProp(Property.BOND_ENERGY.value, bond_energy)
                     found = True
                     break
             if not found:
                 print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Bond not found")
+
+    def __set_antibond_prop(self) -> None:
+        bond_occupancy_blocks = self.__extract_bond_occupancy_blocks()
+
+        for bond in self.mol.GetBonds():
+            found = None
+            begin_atom = bond.GetBeginAtom()
+            end_atom = bond.GetEndAtom()
+            atom_symbol_begin = begin_atom.GetSymbol()
+            atom_idx_begin = begin_atom.GetIdx() + 1
+            atom_symbol_end = end_atom.GetSymbol()
+            atom_idx_end = end_atom.GetIdx() + 1
+
+            pattern_1 = fr"BD\*\(\s+1\)\s*{atom_symbol_begin}\s+{atom_idx_begin}\s+\-\s*{atom_symbol_end}\s+{atom_idx_end}"
+            pattern_2 = fr"BD\*\(\s+1\)\s*{atom_symbol_end}\s+{atom_idx_end}\s+\-\s*{atom_symbol_begin}\s+{atom_idx_begin}"
+
+            for line in bond_occupancy_blocks[-1]:
+                if re.search(pattern_1, line):
+                    bond_occupancy = str.split(line)[-3]
+                    bond_energy = str.split(line)[-2]
+                    bond.SetProp(Property.ANTIBOND_OCCUPANCY.value, bond_occupancy)
+                    bond.SetProp(Property.ANTIBOND_ENERGY.value, bond_energy)
+                    found = True
+                    break
+                elif re.search(pattern_2, line):
+                    bond_occupancy = str.split(line)[-3]
+                    bond_energy = str.split(line)[-2]
+                    bond.SetProp(Property.ANTIBOND_OCCUPANCY.value, bond_occupancy)
+                    bond.SetProp(Property.ANTIBOND_ENERGY.value, bond_energy)
+                    found = True
+                    break
+            if not found:
+                print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Antibond not found")
 
     def __get_homo_lumo(self) -> (float, float):
         orbital_blocks = self.__extract_orbital_blocks()
@@ -175,7 +229,8 @@ class ParameterExtractor:
             self.__conformer,
             atom_1.GetIdx(),
             atom_2.GetIdx(),
-            atom_3.GetIdx(), atom_4.GetIdx()
+            atom_3.GetIdx(),
+            atom_4.GetIdx()
         )
 
     def distance_to_plane(self, atom: Chem.Atom) -> float:
@@ -240,8 +295,14 @@ class ParameterExtractor:
 
 class Property(Enum):
     CHARGE = "nbo_charge"
-    OCCUPANCY = "bond_occupancy"
-    ENERGY = "bond_energy"
+    BOND_OCCUPANCY = "bond_occupancy"
+    BOND_ENERGY = "bond_energy"
+    ANTIBOND_OCCUPANCY = "antibond_occupancy"
+    ANTIBOND_ENERGY = "antibond_energy"
+    LONE_PAIR_OCCUPANCY = "lone_pair_occupancy"
+    LONE_PAIR_ENERGY = "lone_pair_energy"
+    NMR_ISOTROPIC = "nmr_isotropic"
+    NMR_ANISOTROPIC = "nmr_anisotropic"
 
 
 class AtomOnPlaneException(Exception):
