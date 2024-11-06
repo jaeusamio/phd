@@ -262,7 +262,7 @@ class ParameterExtractor:
 
     def __get_p_substituents(self, p: Chem.Atom) -> (Chem.Atom, Chem.Atom):
         substituents = list(filter(
-            lambda x: x.GetIdx() != self.bridge.GetIdx() and x.GetIdx() != self.rh.GetIdx(),
+            lambda x: x.GetIdx() != self.bridge.GetIdx() and x.GetSymbol() != "Rh" and x.GetSymbol() != "P",
             p.GetNeighbors())
         )
         r1, r2 = sorted(substituents, key=lambda x: self.distance_to_plane(x))
@@ -313,4 +313,4 @@ class AtomOnPlaneException(Exception):
 
 
 if __name__ == "__main__":
-    comp = ParameterExtractor("l_1_SPE")
+    comp = ParameterExtractor("l_39_SPE")
