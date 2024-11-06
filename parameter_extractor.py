@@ -272,12 +272,22 @@ class ParameterExtractor:
         cod = Chem.MolFromSmiles("C1CC=CCCC=C1")
         cyclooctane = Chem.MolFromSmiles("C1CCCCCCC1")  # Pdb conversions shows structure of COD as single bonds
 
-        cod_carbons = self.mol.GetSubstructMatch(cod)
-        if len(cod_carbons) == 0:
-            cod_carbons = self.mol.GetSubstructMatch(cyclooctane)
-        cod_carbons = [self.mol.GetAtomWithIdx(c) for c in cod_carbons]
-        cod_atoms = cod_carbons
-        for c in cod_carbons:
+        cod_matches = self.mol.GetSubstructMatches(cod)
+        cod_list = []
+        if len(cod_matches) == 0:
+            cod_matches = self.mol.GetSubstructMatches(cyclooctane)
+        # Checks that the COD is coordinated to Rh.
+        # Otherwise, it could match a COD or cyclooctane acting as a substituent in the ligand.
+        for cod_candidate in cod_matches:
+            for carbon_idx in cod_candidate:
+                atom = self.mol.GetAtomWithIdx(carbon_idx)
+                neighbors = atom.GetNeighbors()
+                for neighbor in neighbors:
+                    if neighbor.GetSymbol() == "Rh":
+                        cod_list.append(cod_candidate)
+
+        cod_atoms = [self.mol.GetAtomWithIdx(c) for c in cod_list[0]]
+        for c in cod_atoms:
             cod_hydrogens = [h for h in c.GetNeighbors() if h.GetSymbol() == "H"]
             cod_atoms.extend(cod_hydrogens)
 
