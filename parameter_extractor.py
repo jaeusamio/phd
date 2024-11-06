@@ -215,8 +215,9 @@ class ParameterExtractor:
     def __get_bridge(self) -> Chem.Atom:
         p1_neighbors = set(map(lambda x: x.GetIdx(), self.p1.GetNeighbors()))
         p2_neighbors = set(map(lambda x: x.GetIdx(), self.p2.GetNeighbors()))
-        bridge_idx = list(p1_neighbors.intersection(p2_neighbors))[0]
-        return next(atom for atom in self.__atom_list if atom.GetIdx() == bridge_idx)
+        intersection = list(p1_neighbors.intersection(p2_neighbors))
+        intersection_atoms = list(map(lambda x: self.mol.GetAtomWithIdx(x), intersection))
+        return next(atom for atom in intersection_atoms if atom.GetSymbol() == "C")
 
     def get_bond_distance(self, atom_1: Chem.Atom, atom_2: Chem.Atom) -> float:
         return rdMolTransforms.GetBondLength(self.__conformer, atom_1.GetIdx(), atom_2.GetIdx())
