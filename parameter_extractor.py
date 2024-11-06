@@ -11,6 +11,7 @@ class ParameterExtractor:
     __out = None
     __atom_list = []
     __conformer: Chem.Conformer = None
+    __verbose: bool
     mol: Chem.Mol = None
     p1: Chem.Atom = None
     p2: Chem.Atom = None
@@ -29,7 +30,8 @@ class ParameterExtractor:
     lumo: float = None
     dipole: float = None
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, verbose: bool = False):
+        self.__verbose = verbose
         with open(f"./out/spe/{filename}.out") as f:
             self.__out = f.readlines()
         mol = next(pybel.readfile("out", f"./out/spe/{filename}.out"))
@@ -156,7 +158,7 @@ class ParameterExtractor:
                     bond.SetProp(Property.BOND_ENERGY.value, bond_energy)
                     found = True
                     break
-            if not found:
+            if not found and self.__verbose:
                 print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Bond not found")
 
     def __set_antibond_prop(self) -> None:
@@ -189,7 +191,7 @@ class ParameterExtractor:
                     bond.SetProp(Property.ANTIBOND_ENERGY.value, bond_energy)
                     found = True
                     break
-            if not found:
+            if not found and self.__verbose:
                 print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Antibond not found")
 
     def __get_homo_lumo(self) -> (float, float):
@@ -217,7 +219,7 @@ class ParameterExtractor:
         p2_neighbors = set(map(lambda x: x.GetIdx(), self.p2.GetNeighbors()))
         intersection = list(p1_neighbors.intersection(p2_neighbors))
         intersection_atoms = list(map(lambda x: self.mol.GetAtomWithIdx(x), intersection))
-        return next(atom for atom in intersection_atoms if atom.GetSymbol() == "C")
+        return next(atom for atom in intersection_atoms if atom.GetSymbol() != "Rh")
 
     def get_bond_distance(self, atom_1: Chem.Atom, atom_2: Chem.Atom) -> float:
         return rdMolTransforms.GetBondLength(self.__conformer, atom_1.GetIdx(), atom_2.GetIdx())
@@ -311,4 +313,4 @@ class AtomOnPlaneException(Exception):
 
 
 if __name__ == "__main__":
-    comp = ParameterExtractor("l_2_SPE")
+    comp = ParameterExtractor("l_1_SPE")
