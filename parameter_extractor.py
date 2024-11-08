@@ -8,104 +8,121 @@ from rdkit.Chem import rdDetermineBonds
 
 
 class ParameterExtractor:
-    __out = None
-    __atom_list = []
+    __out: list[str]
+    __out_no_rh: list[str]
     __conformer: Chem.Conformer = None
     __verbose: bool
-    mol: Chem.Mol = None
-    p1: Chem.Atom = None
-    p2: Chem.Atom = None
-    r1: Chem.Atom = None
-    r2: Chem.Atom = None
-    r3: Chem.Atom = None
-    r4: Chem.Atom = None
-    bridge: Chem.Atom = None
-    rh: Chem.Atom = None
-    cod: list[Chem.Atom] = None
-    c1: Chem.Atom = None
-    c2: Chem.Atom = None
-    c3: Chem.Atom = None
-    c4: Chem.Atom = None
-    homo: float = None
-    lumo: float = None
-    dipole: float = None
+    mol: Chem.Mol
+    p1: Chem.Atom
+    p2: Chem.Atom
+    r1: Chem.Atom
+    r2: Chem.Atom
+    r3: Chem.Atom
+    r4: Chem.Atom
+    bridge: Chem.Atom
+    rh: Chem.Atom
+    cod: list[Chem.Atom]
+    c1: Chem.Atom
+    c2: Chem.Atom
+    c3: Chem.Atom
+    c4: Chem.Atom
+    homo: float
+    homo_no_rh: float
+    lumo: float
+    lumo_no_rh: float
+    dipole: float
+    dipole_no_rh: float
 
-    def __init__(self, filename: str, verbose: bool = False):
+    def __init__(self, filename: str, verbose: bool = False, include_no_rh: bool = True):
         self.__verbose = verbose
         with open(f"./out/spe/{filename}.out") as f:
             self.__out = f.readlines()
+        if include_no_rh:
+            with open(f"./out/spe_no_rh/{filename}_NoRh.out") as f:
+                self.__out_no_rh = f.readlines()
         mol = next(pybel.readfile("out", f"./out/spe/{filename}.out"))
         xyz = mol.write("xyz")
         self.mol = Chem.MolFromXYZBlock(xyz)
         rdDetermineBonds.DetermineConnectivity(self.mol)
         self.__conformer = self.mol.GetConformer()
-        self.__atom_list = self.mol.GetAtoms()
         self.__set_charge_prop()
         self.__set_bond_prop()
         self.__set_antibond_prop()
         self.__set_nmr_property()
+        self.rh = next(atom for atom in self.mol.GetAtoms() if atom.GetSymbol() == "Rh")
+        self.cod = self.__get_cod()
+        self.__set_no_rh_numbering()
         self.p1, self.p2 = self.__get_phosphorus()
-        self.rh = next(atom for atom in self.__atom_list if atom.GetSymbol() == "Rh")
         self.bridge = self.__get_bridge()
         self.r1, self.r2 = self.__get_p_substituents(self.p1)
         self.r3, self.r4 = self.__get_p_substituents(self.p2)
         self.homo, self.lumo = self.__get_homo_lumo()
+        self.homo_no_rh, self.lumo_no_rh = self.__get_homo_lumo(no_rh=True)
         self.dipole = self.__get_dipole()
-        self.cod = self.__get_cod()
-        self.c1, self.c2, self.c3, self.c4 = self.__get_c_substituents()
+        self.dipole_no_rh = self.__get_dipole(no_rh=True)
+        self.c1, self.c2, self.c3, self.c4 = self.__get_rh_c_substituents()
 
     def __extract_blocks_from_out(
             self,
             start_pattern: str,
             end_pattern: str,
-            include_last_line=False
+            no_rh: bool = False,
+            include_last_line: bool = False
     ) -> list[list[str]]:
         blocks = []
         start_line = None
         end_line = None
-        for i, line in enumerate(self.__out):
+        if no_rh:
+            out = self.__out_no_rh
+        else:
+            out = self.__out
+        for i, line in enumerate(out):
             if re.search(start_pattern, line):
                 start_line = i
             if re.search(end_pattern, line):
                 end_line = i
             if start_line is not None and end_line is not None:
-                blocks.append(self.__out[start_line:end_line + include_last_line])
+                blocks.append(out[start_line:end_line + include_last_line])
                 start_line = None
                 end_line = None
         return blocks
 
-    def __extract_nbo_charge_blocks(self) -> list[list[str]]:
+    def __extract_nbo_charge_blocks(self, no_rh: bool = False) -> list[list[str]]:
         start_pattern = r"Summary of Natural Population Analysis\:"
         end_pattern = r"\* Total \*"
-        nbo_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, include_last_line=True)
+        nbo_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, no_rh, include_last_line=True)
         return nbo_blocks
 
-    def __extract_orbital_blocks(self) -> list[list[str]]:
+    def __extract_orbital_blocks(self, no_rh: bool = False) -> list[list[str]]:
         start_pattern = r"Orbital symmetries"
         end_pattern = r"Condensed to atoms \(all electrons\)"
-        orbital_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern)
+        orbital_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, no_rh)
         return orbital_blocks
 
-    def __extract_nmr_blocks(self) -> list[list[str]]:
+    def __extract_nmr_blocks(self, no_rh: bool = False) -> list[list[str]]:
         start_pattern = r"SCF GIAO Magnetic shielding tensor \(ppm\)\:"
         end_pattern = r"End of Minotr"
-        nmr_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern)
+        nmr_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, no_rh)
         return nmr_blocks
 
-    def __extract_bond_occupancy_blocks(self) -> list[list[str]]:
+    def __extract_bond_occupancy_blocks(self, no_rh: bool = False) -> list[list[str]]:
         start_pattern = r"Natural Bond Orbitals \(Summary\)\:"
         end_pattern = r"NATURAL LOCALIZED MOLECULAR ORBITAL \(NLMO\) ANALYSIS"
-        bond_occupancy_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern)
+        bond_occupancy_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, no_rh)
         return bond_occupancy_blocks
 
-    def __get_dipole(self) -> float:
-        dipole = [line for line in self.__out if re.search(" X= ", line)][-1]
+    def __get_dipole(self, no_rh: bool = False) -> float:
+        if no_rh:
+            out = self.__out_no_rh
+        else:
+            out = self.__out
+        dipole = [line for line in out if re.search(" X= ", line)][-1]
         if str.split(dipole)[-2] == "Tot=":
             return float(str.split(dipole)[-1])
 
-    def __set_charge_prop(self) -> None:
-        charge_blocks = self.__extract_nbo_charge_blocks()
-        for atom in self.__atom_list:
+    def __set_charge_prop(self, no_rh: bool = False) -> None:
+        charge_blocks = self.__extract_nbo_charge_blocks(no_rh)
+        for atom in self.mol.GetAtoms():
             _atom_idx = str(atom.GetIdx() + 1)
             _atom_symbol = atom.GetSymbol()
             for line in charge_blocks[-1]:
@@ -115,9 +132,9 @@ class ParameterExtractor:
                     atom.SetProp(Property.CHARGE.value, _atom_nbo)
                     break
 
-    def __set_nmr_property(self) -> None:
-        nmr_blocks = self.__extract_nmr_blocks()
-        for atom in self.__atom_list:
+    def __set_nmr_property(self, no_rh: bool = False) -> None:
+        nmr_blocks = self.__extract_nmr_blocks(no_rh)
+        for atom in self.mol.GetAtoms():
             atom_idx = str(atom.GetIdx() + 1)
             atom_symbol = atom.GetSymbol()
             for line in nmr_blocks[-1]:
@@ -128,8 +145,8 @@ class ParameterExtractor:
                     atom.SetProp(Property.NMR_ISOTROPIC.value, _atom_nmr_isotropic)
                     atom.SetProp(Property.NMR_ANISOTROPIC.value, _atom_nmr_anisotropic)
 
-    def __set_bond_prop(self) -> None:
-        bond_occupancy_blocks = self.__extract_bond_occupancy_blocks()
+    def __set_bond_prop(self, no_rh: bool = False) -> None:
+        bond_occupancy_blocks = self.__extract_bond_occupancy_blocks(no_rh)
 
         for bond in self.mol.GetBonds():
             found = None
@@ -161,8 +178,8 @@ class ParameterExtractor:
             if not found and self.__verbose:
                 print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Bond not found")
 
-    def __set_antibond_prop(self) -> None:
-        bond_occupancy_blocks = self.__extract_bond_occupancy_blocks()
+    def __set_antibond_prop(self, no_rh: bool = False) -> None:
+        bond_occupancy_blocks = self.__extract_bond_occupancy_blocks(no_rh)
 
         for bond in self.mol.GetBonds():
             found = None
@@ -194,8 +211,8 @@ class ParameterExtractor:
             if not found and self.__verbose:
                 print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Antibond not found")
 
-    def __get_homo_lumo(self) -> (float, float):
-        orbital_blocks = self.__extract_orbital_blocks()
+    def __get_homo_lumo(self, no_rh: bool = False) -> (float, float):
+        orbital_blocks = self.__extract_orbital_blocks(no_rh)
         homo = None
         for line in orbital_blocks[-1][::-1]:
             pattern = r"Alpha\s+occ"
@@ -211,7 +228,7 @@ class ParameterExtractor:
         return float(homo), float(lumo)
 
     def __get_phosphorus(self) -> (Chem.Atom, Chem.Atom):
-        p_list = list(filter(lambda x: x.GetSymbol() == "P", self.__atom_list))
+        p_list = list(filter(lambda x: x.GetSymbol() == "P", self.mol.GetAtoms()))
         return sorted(p_list, key=lambda x: float(x.GetProp(Property.CHARGE.value)), reverse=True)
 
     def __get_bridge(self) -> Chem.Atom:
@@ -293,7 +310,19 @@ class ParameterExtractor:
 
         return cod_atoms
 
-    def __get_c_substituents(self) -> (Chem.Atom, Chem.Atom, Chem.Atom, Chem.Atom):
+    def __set_no_rh_numbering(self):
+        """
+        Sets an atom map number mapping each atom with the idx of their no rh version.\n
+        This allows to access information of the no rh version without losing the atom reference.
+        """
+        rh_cod_indices = [self.rh.GetIdx()] + [atom.GetIdx() for atom in self.cod]
+        non_rh_cod_indices = [atom.GetIdx() for atom in self.mol.GetAtoms() if atom.GetIdx() not in rh_cod_indices]
+        new_order = non_rh_cod_indices + rh_cod_indices
+        for i, idx in enumerate(new_order):
+            atom = self.mol.GetAtomWithIdx(idx)
+            atom.SetAtomMapNum(i + 1)
+
+    def __get_rh_c_substituents(self) -> (Chem.Atom, Chem.Atom, Chem.Atom, Chem.Atom):
         cod_rh = [a for a in self.rh.GetNeighbors() if a.GetSymbol() == "C"]
         cod_c_info = [
             (c, self.get_bond_distance(self.p1, c), self.distance_to_plane(c), self.get_angle(self.p1, self.rh, c)) for
@@ -308,14 +337,23 @@ class ParameterExtractor:
 
 class Property(Enum):
     CHARGE = "nbo_charge"
+    CHARGE_NO_RH = "nbo_charge_no_rh"
     BOND_OCCUPANCY = "bond_occupancy"
+    BOND_OCCUPANCY_NO_RH = "bond_occupancy_no_rh"
     BOND_ENERGY = "bond_energy"
+    BOND_ENERGY_NO_RH = "bond_energy_no_rh"
     ANTIBOND_OCCUPANCY = "antibond_occupancy"
+    ANTIBOND_OCCUPANCY_NO_RH = "antibond_occupancy_no_rh"
     ANTIBOND_ENERGY = "antibond_energy"
+    ANTIBOND_ENERGY_NO_RH = "antibond_energy_no_rh"
     LONE_PAIR_OCCUPANCY = "lone_pair_occupancy"
+    LONE_PAIR_OCCUPANCY_NO_RH = "lone_pair_occupancy_no_rh"
     LONE_PAIR_ENERGY = "lone_pair_energy"
+    LONE_PAIR_ENERGY_NO_RH = "lone_pair_energy_no_rh"
     NMR_ISOTROPIC = "nmr_isotropic"
+    NMR_ISOTROPIC_NO_RH = "nmr_isotropic_no_rh"
     NMR_ANISOTROPIC = "nmr_anisotropic"
+    NMR_ANISOTROPIC_NO_RH = "nmr_anisotropic_no_rh"
 
 
 class AtomOnPlaneException(Exception):
