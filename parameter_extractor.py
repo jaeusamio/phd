@@ -45,10 +45,10 @@ class ParameterExtractor:
         self.mol = Chem.MolFromXYZBlock(xyz)
         rdDetermineBonds.DetermineConnectivity(self.mol)
         self.__conformer = self.mol.GetConformer()
-        self.__set_charge_prop()
-        self.__set_bond_prop()
-        self.__set_antibond_prop()
-        self.__set_nmr_property()
+        self.__set_charge_prop(no_rh=include_no_rh)
+        self.__set_bond_prop(no_rh=include_no_rh)
+        self.__set_antibond_prop(no_rh=include_no_rh)
+        self.__set_nmr_property(no_rh=include_no_rh)
         self.rh = next(atom for atom in self.mol.GetAtoms() if atom.GetSymbol() == "Rh")
         self.cod = self.__get_cod()
         self.__set_no_rh_numbering()
@@ -56,17 +56,18 @@ class ParameterExtractor:
         self.bridge = self.__get_bridge()
         self.r1, self.r2 = self.__get_p_substituents(self.p1)
         self.r3, self.r4 = self.__get_p_substituents(self.p2)
-        self.homo, self.lumo = self.__get_homo_lumo()
-        self.homo_no_rh, self.lumo_no_rh = self.__get_homo_lumo(no_rh=True)
-        self.dipole = self.__get_dipole()
-        self.dipole_no_rh = self.__get_dipole(no_rh=True)
+        self.homo, self.lumo = self.__get_homo_lumo(no_rh=False)
+        self.dipole = self.__get_dipole(no_rh=False)
+        if include_no_rh:
+            self.homo_no_rh, self.lumo_no_rh = self.__get_homo_lumo(no_rh=True)
+            self.dipole_no_rh = self.__get_dipole(no_rh=True)
         self.c1, self.c2, self.c3, self.c4 = self.__get_rh_c_substituents()
 
     def __extract_blocks_from_out(
             self,
             start_pattern: str,
             end_pattern: str,
-            no_rh: bool = False,
+            no_rh: bool,
             include_last_line: bool = False
     ) -> list[list[str]]:
         blocks = []
@@ -87,31 +88,31 @@ class ParameterExtractor:
                 end_line = None
         return blocks
 
-    def __extract_nbo_charge_blocks(self, no_rh: bool = False) -> list[list[str]]:
+    def __extract_nbo_charge_blocks(self, no_rh: bool) -> list[list[str]]:
         start_pattern = r"Summary of Natural Population Analysis\:"
         end_pattern = r"\* Total \*"
         nbo_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, no_rh, include_last_line=True)
         return nbo_blocks
 
-    def __extract_orbital_blocks(self, no_rh: bool = False) -> list[list[str]]:
+    def __extract_orbital_blocks(self, no_rh: bool) -> list[list[str]]:
         start_pattern = r"Orbital symmetries"
         end_pattern = r"Condensed to atoms \(all electrons\)"
         orbital_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, no_rh)
         return orbital_blocks
 
-    def __extract_nmr_blocks(self, no_rh: bool = False) -> list[list[str]]:
+    def __extract_nmr_blocks(self, no_rh: bool) -> list[list[str]]:
         start_pattern = r"SCF GIAO Magnetic shielding tensor \(ppm\)\:"
         end_pattern = r"End of Minotr"
         nmr_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, no_rh)
         return nmr_blocks
 
-    def __extract_bond_occupancy_blocks(self, no_rh: bool = False) -> list[list[str]]:
+    def __extract_bond_occupancy_blocks(self, no_rh: bool) -> list[list[str]]:
         start_pattern = r"Natural Bond Orbitals \(Summary\)\:"
         end_pattern = r"NATURAL LOCALIZED MOLECULAR ORBITAL \(NLMO\) ANALYSIS"
         bond_occupancy_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, no_rh)
         return bond_occupancy_blocks
 
-    def __get_dipole(self, no_rh: bool = False) -> float:
+    def __get_dipole(self, no_rh: bool) -> float:
         if no_rh:
             out = self.__out_no_rh
         else:
@@ -120,8 +121,9 @@ class ParameterExtractor:
         if str.split(dipole)[-2] == "Tot=":
             return float(str.split(dipole)[-1])
 
-    def __set_charge_prop(self, no_rh: bool = False) -> None:
+    def __set_charge_prop(self, no_rh: bool) -> None:
         charge_blocks = self.__extract_nbo_charge_blocks(no_rh)
+        print(charge_blocks)
         for atom in self.mol.GetAtoms():
             _atom_idx = str(atom.GetIdx() + 1)
             _atom_symbol = atom.GetSymbol()
@@ -132,7 +134,7 @@ class ParameterExtractor:
                     atom.SetProp(Property.CHARGE.value, _atom_nbo)
                     break
 
-    def __set_nmr_property(self, no_rh: bool = False) -> None:
+    def __set_nmr_property(self, no_rh: bool) -> None:
         nmr_blocks = self.__extract_nmr_blocks(no_rh)
         for atom in self.mol.GetAtoms():
             atom_idx = str(atom.GetIdx() + 1)
@@ -145,7 +147,7 @@ class ParameterExtractor:
                     atom.SetProp(Property.NMR_ISOTROPIC.value, _atom_nmr_isotropic)
                     atom.SetProp(Property.NMR_ANISOTROPIC.value, _atom_nmr_anisotropic)
 
-    def __set_bond_prop(self, no_rh: bool = False) -> None:
+    def __set_bond_prop(self, no_rh: bool) -> None:
         bond_occupancy_blocks = self.__extract_bond_occupancy_blocks(no_rh)
 
         for bond in self.mol.GetBonds():
@@ -178,7 +180,7 @@ class ParameterExtractor:
             if not found and self.__verbose:
                 print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Bond not found")
 
-    def __set_antibond_prop(self, no_rh: bool = False) -> None:
+    def __set_antibond_prop(self, no_rh: bool) -> None:
         bond_occupancy_blocks = self.__extract_bond_occupancy_blocks(no_rh)
 
         for bond in self.mol.GetBonds():
@@ -211,7 +213,7 @@ class ParameterExtractor:
             if not found and self.__verbose:
                 print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Antibond not found")
 
-    def __get_homo_lumo(self, no_rh: bool = False) -> (float, float):
+    def __get_homo_lumo(self, no_rh: bool) -> (float, float):
         orbital_blocks = self.__extract_orbital_blocks(no_rh)
         homo = None
         for line in orbital_blocks[-1][::-1]:
@@ -361,4 +363,4 @@ class AtomOnPlaneException(Exception):
 
 
 if __name__ == "__main__":
-    comp = ParameterExtractor("l_39_SPE")
+    comp = ParameterExtractor("l_14_SPE", include_no_rh=False)
