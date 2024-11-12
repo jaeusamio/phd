@@ -123,7 +123,6 @@ class ParameterExtractor:
 
     def __set_charge_prop(self, no_rh: bool) -> None:
         charge_blocks = self.__extract_nbo_charge_blocks(no_rh)
-        print(charge_blocks)
         for atom in self.mol.GetAtoms():
             _atom_idx = str(atom.GetIdx() + 1)
             _atom_symbol = atom.GetSymbol()
