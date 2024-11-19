@@ -33,22 +33,26 @@ class ParameterExtractor:
     dipole: float
     dipole_no_rh: float
 
-    def __init__(self, filename: str, verbose: bool = False, include_no_rh: bool = True):
+    def __init__(self, path: str, verbose: bool = False, no_rh_path: str = None, include_spe_prop: bool = True):
         self.__verbose = verbose
-        with open(f"./out/spe/{filename}.out") as f:
+        include_no_rh = no_rh_path is not None
+        with open(path) as f:
             self.__out = f.readlines()
         if include_no_rh:
-            with open(f"./out/spe_no_rh/{filename}_NoRh.out") as f:
+            with open(no_rh_path) as f:
                 self.__out_no_rh = f.readlines()
-        mol = next(pybel.readfile("out", f"./out/spe/{filename}.out"))
+        mol = next(pybel.readfile("out", path))
         xyz = mol.write("xyz")
         self.mol = Chem.MolFromXYZBlock(xyz)
         rdDetermineBonds.DetermineConnectivity(self.mol)
         self.__conformer = self.mol.GetConformer()
         self.__set_charge_prop(no_rh=include_no_rh)
-        self.__set_bond_prop(no_rh=include_no_rh)
-        self.__set_antibond_prop(no_rh=include_no_rh)
-        self.__set_nmr_property(no_rh=include_no_rh)
+        if include_spe_prop:
+            self.__set_bond_prop(no_rh=include_no_rh)
+            self.__set_antibond_prop(no_rh=include_no_rh)
+            self.__set_nmr_property(no_rh=include_no_rh)
+            self.homo, self.lumo = self.__get_homo_lumo(no_rh=False)
+            self.dipole = self.__get_dipole(no_rh=False)
         self.rh = next(atom for atom in self.mol.GetAtoms() if atom.GetSymbol() == "Rh")
         self.cod = self.__get_cod()
         self.__set_no_rh_numbering()
@@ -56,8 +60,6 @@ class ParameterExtractor:
         self.bridge = self.__get_bridge()
         self.r1, self.r2 = self.__get_p_substituents(self.p1)
         self.r3, self.r4 = self.__get_p_substituents(self.p2)
-        self.homo, self.lumo = self.__get_homo_lumo(no_rh=False)
-        self.dipole = self.__get_dipole(no_rh=False)
         if include_no_rh:
             self.homo_no_rh, self.lumo_no_rh = self.__get_homo_lumo(no_rh=True)
             self.dipole_no_rh = self.__get_dipole(no_rh=True)
@@ -362,4 +364,4 @@ class AtomOnPlaneException(Exception):
 
 
 if __name__ == "__main__":
-    comp = ParameterExtractor("l_14_SPE", include_no_rh=False)
+    comp = ParameterExtractor("./out/spe/l_13_SPE.out")
