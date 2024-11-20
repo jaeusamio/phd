@@ -67,6 +67,7 @@ class ParameterExtractor:
             self.__set_bond_prop(no_rh=True)
             self.__set_antibond_prop(no_rh=True)
             self.__set_nmr_property(no_rh=True)
+            self.__set_lone_pair_prop(no_rh=True)
             self.homo_no_rh, self.lumo_no_rh = self.__get_homo_lumo(no_rh=True)
             self.dipole_no_rh = self.__get_dipole(no_rh=True)
 
@@ -227,6 +228,42 @@ class ParameterExtractor:
             if not found and self.__verbose:
                 print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Antibond not found")
 
+    def __set_lone_pair_prop(self, no_rh: bool) -> None:
+        bond_occupancy_blocks = self.__extract_bond_occupancy_blocks(no_rh=no_rh)
+
+        for atom in self.mol.GetAtoms():
+            atom_symbol = atom.GetSymbol()
+            atom_idx = atom.GetAtomMapNum() if no_rh else atom.GetIdx() + 1
+
+            finished = False
+            count = 1
+
+            while finished is False:
+                pattern = fr"LP\s\(\s+{count}\)\s*{atom_symbol}\s+{atom_idx}"
+
+                # For Rh complexes, no more than 4 LP orbitals will be found
+                prop_occ = getattr(
+                    Property,
+                    f"LONE_PAIR_OCCUPANCY{'_NO_RH' if no_rh else ''}_{min(count, 4)}"
+                ).value
+                prop_eng = getattr(
+                    Property,
+                    f"LONE_PAIR_ENERGY{'_NO_RH' if no_rh else ''}_{min(count, 4)}"
+                ).value
+
+                match_found = False
+                for line in bond_occupancy_blocks[-1]:
+                    if re.search(pattern, line):
+                        lp_occupancy = str.split(line)[-3]
+                        lp_energy = str.split(line)[-2]
+                        atom.SetProp(prop_occ, lp_occupancy)
+                        atom.SetProp(prop_eng, lp_energy)
+                        count += 1
+                        match_found = True
+                        break
+                if not match_found:
+                    finished = True
+
     def __get_homo_lumo(self, no_rh: bool) -> (float, float):
         orbital_blocks = self.__extract_orbital_blocks(no_rh)
         homo = None
@@ -362,10 +399,22 @@ class Property(Enum):
     ANTIBOND_OCCUPANCY_NO_RH = "antibond_occupancy_no_rh"
     ANTIBOND_ENERGY = "antibond_energy"
     ANTIBOND_ENERGY_NO_RH = "antibond_energy_no_rh"
-    LONE_PAIR_OCCUPANCY = "lone_pair_occupancy"
-    LONE_PAIR_OCCUPANCY_NO_RH = "lone_pair_occupancy_no_rh"
-    LONE_PAIR_ENERGY = "lone_pair_energy"
-    LONE_PAIR_ENERGY_NO_RH = "lone_pair_energy_no_rh"
+    LONE_PAIR_OCCUPANCY_1 = "lone_pair_occupancy_1"
+    LONE_PAIR_OCCUPANCY_2 = "lone_pair_occupancy_2"
+    LONE_PAIR_OCCUPANCY_3 = "lone_pair_occupancy_3"
+    LONE_PAIR_OCCUPANCY_4 = "lone_pair_occupancy_4"
+    LONE_PAIR_OCCUPANCY_NO_RH_1 = "lone_pair_occupancy_no_rh_1"
+    LONE_PAIR_OCCUPANCY_NO_RH_2 = "lone_pair_occupancy_no_rh_2"
+    LONE_PAIR_OCCUPANCY_NO_RH_3 = "lone_pair_occupancy_no_rh_3"
+    LONE_PAIR_OCCUPANCY_NO_RH_4 = "lone_pair_occupancy_no_rh_4"
+    LONE_PAIR_ENERGY_1 = "lone_pair_energy_1"
+    LONE_PAIR_ENERGY_2 = "lone_pair_energy_2"
+    LONE_PAIR_ENERGY_3 = "lone_pair_energy_3"
+    LONE_PAIR_ENERGY_4 = "lone_pair_energy_4"
+    LONE_PAIR_ENERGY_NO_RH_1 = "lone_pair_energy_no_rh_1"
+    LONE_PAIR_ENERGY_NO_RH_2 = "lone_pair_energy_no_rh_2"
+    LONE_PAIR_ENERGY_NO_RH_3 = "lone_pair_energy_no_rh_3"
+    LONE_PAIR_ENERGY_NO_RH_4 = "lone_pair_energy_no_rh_4"
     NMR_ISOTROPIC = "nmr_isotropic"
     NMR_ISOTROPIC_NO_RH = "nmr_isotropic_no_rh"
     NMR_ANISOTROPIC = "nmr_anisotropic"
