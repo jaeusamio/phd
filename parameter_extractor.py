@@ -46,24 +46,29 @@ class ParameterExtractor:
         self.mol = Chem.MolFromXYZBlock(xyz)
         rdDetermineBonds.DetermineConnectivity(self.mol)
         self.__conformer = self.mol.GetConformer()
-        self.__set_charge_prop(no_rh=include_no_rh)
+        self.__set_charge_prop(no_rh=False)
         if include_spe_prop:
-            self.__set_bond_prop(no_rh=include_no_rh)
-            self.__set_antibond_prop(no_rh=include_no_rh)
-            self.__set_nmr_property(no_rh=include_no_rh)
+            self.__set_bond_prop(no_rh=False)
+            self.__set_antibond_prop(no_rh=False)
+            self.__set_nmr_property(no_rh=False)
+            self.__set_lone_pair_prop(no_rh=False)
             self.homo, self.lumo = self.__get_homo_lumo(no_rh=False)
             self.dipole = self.__get_dipole(no_rh=False)
         self.rh = next(atom for atom in self.mol.GetAtoms() if atom.GetSymbol() == "Rh")
         self.cod = self.__get_cod()
-        self.__set_no_rh_numbering()
         self.p1, self.p2 = self.__get_phosphorus()
         self.bridge = self.__get_bridge()
         self.r1, self.r2 = self.__get_p_substituents(self.p1)
         self.r3, self.r4 = self.__get_p_substituents(self.p2)
+        self.c1, self.c2, self.c3, self.c4 = self.__get_rh_c_substituents()
         if include_no_rh:
+            self.__set_no_rh_numbering()
+            self.__set_charge_prop(no_rh=True)
+            self.__set_bond_prop(no_rh=True)
+            self.__set_antibond_prop(no_rh=True)
+            self.__set_nmr_property(no_rh=True)
             self.homo_no_rh, self.lumo_no_rh = self.__get_homo_lumo(no_rh=True)
             self.dipole_no_rh = self.__get_dipole(no_rh=True)
-        self.c1, self.c2, self.c3, self.c4 = self.__get_rh_c_substituents()
 
     def __extract_blocks_from_out(
             self,
@@ -125,40 +130,46 @@ class ParameterExtractor:
 
     def __set_charge_prop(self, no_rh: bool) -> None:
         charge_blocks = self.__extract_nbo_charge_blocks(no_rh)
+        prop = Property.CHARGE_NO_RH.value if no_rh else Property.CHARGE.value
         for atom in self.mol.GetAtoms():
-            _atom_idx = str(atom.GetIdx() + 1)
+            _atom_idx = atom.GetAtomMapNum() if no_rh else str(atom.GetIdx() + 1)
             _atom_symbol = atom.GetSymbol()
             for line in charge_blocks[-1]:
                 pattern = fr"{_atom_symbol}\s+{_atom_idx}.+?\d"
                 if re.search(pattern, line):
                     _atom_nbo = str.split(line)[2]
-                    atom.SetProp(Property.CHARGE.value, _atom_nbo)
+                    atom.SetProp(prop, _atom_nbo)
                     break
 
     def __set_nmr_property(self, no_rh: bool) -> None:
         nmr_blocks = self.__extract_nmr_blocks(no_rh)
+        prop_isotropic = Property.NMR_ISOTROPIC_NO_RH.value if no_rh else Property.NMR_ISOTROPIC.value
+        prop_anisotropic = Property.NMR_ANISOTROPIC_NO_RH.value if no_rh else Property.NMR_ANISOTROPIC.value
+
         for atom in self.mol.GetAtoms():
-            atom_idx = str(atom.GetIdx() + 1)
+            atom_idx = atom.GetAtomMapNum() if no_rh else str(atom.GetIdx() + 1)
             atom_symbol = atom.GetSymbol()
             for line in nmr_blocks[-1]:
                 pattern = fr"{atom_idx}\s+{atom_symbol}\s+Isotropic"
                 if re.search(pattern, line):
                     _atom_nmr_isotropic = line.split()[-4]
                     _atom_nmr_anisotropic = line.split()[-1]
-                    atom.SetProp(Property.NMR_ISOTROPIC.value, _atom_nmr_isotropic)
-                    atom.SetProp(Property.NMR_ANISOTROPIC.value, _atom_nmr_anisotropic)
+                    atom.SetProp(prop_isotropic, _atom_nmr_isotropic)
+                    atom.SetProp(prop_anisotropic, _atom_nmr_anisotropic)
 
     def __set_bond_prop(self, no_rh: bool) -> None:
         bond_occupancy_blocks = self.__extract_bond_occupancy_blocks(no_rh)
+        prop_occ = Property.BOND_OCCUPANCY_NO_RH.value if no_rh else Property.BOND_OCCUPANCY.value
+        prop_eng = Property.BOND_ENERGY_NO_RH.value if no_rh else Property.BOND_ENERGY.value
 
         for bond in self.mol.GetBonds():
             found = None
             begin_atom = bond.GetBeginAtom()
             end_atom = bond.GetEndAtom()
             atom_symbol_begin = begin_atom.GetSymbol()
-            atom_idx_begin = begin_atom.GetIdx() + 1
+            atom_idx_begin = begin_atom.GetAtomMapNum() if no_rh else begin_atom.GetIdx() + 1
             atom_symbol_end = end_atom.GetSymbol()
-            atom_idx_end = end_atom.GetIdx() + 1
+            atom_idx_end = end_atom.GetAtomMapNum() if no_rh else end_atom.GetIdx() + 1
 
             pattern_1 = fr"BD\s+\(\s+1\)\s*{atom_symbol_begin}\s+{atom_idx_begin}\s+\-\s*{atom_symbol_end}\s+{atom_idx_end}"
             pattern_2 = fr"BD\s+\(\s+1\)\s*{atom_symbol_end}\s+{atom_idx_end}\s+\-\s*{atom_symbol_begin}\s+{atom_idx_begin}"
@@ -167,15 +178,15 @@ class ParameterExtractor:
                 if re.search(pattern_1, line):
                     bond_occupancy = str.split(line)[-3]
                     bond_energy = str.split(line)[-2]
-                    bond.SetProp(Property.BOND_OCCUPANCY.value, bond_occupancy)
-                    bond.SetProp(Property.BOND_ENERGY.value, bond_energy)
+                    bond.SetProp(prop_occ, bond_occupancy)
+                    bond.SetProp(prop_eng, bond_energy)
                     found = True
                     break
                 elif re.search(pattern_2, line):
                     bond_occupancy = str.split(line)[-3]
                     bond_energy = str.split(line)[-2]
-                    bond.SetProp(Property.BOND_OCCUPANCY.value, bond_occupancy)
-                    bond.SetProp(Property.BOND_ENERGY.value, bond_energy)
+                    bond.SetProp(prop_occ, bond_occupancy)
+                    bond.SetProp(prop_eng, bond_energy)
                     found = True
                     break
             if not found and self.__verbose:
@@ -183,15 +194,17 @@ class ParameterExtractor:
 
     def __set_antibond_prop(self, no_rh: bool) -> None:
         bond_occupancy_blocks = self.__extract_bond_occupancy_blocks(no_rh)
+        prop_occ = Property.ANTIBOND_OCCUPANCY_NO_RH.value if no_rh else Property.ANTIBOND_OCCUPANCY.value
+        prop_eng = Property.ANTIBOND_ENERGY_NO_RH.value if no_rh else Property.ANTIBOND_ENERGY.value
 
         for bond in self.mol.GetBonds():
             found = None
             begin_atom = bond.GetBeginAtom()
             end_atom = bond.GetEndAtom()
             atom_symbol_begin = begin_atom.GetSymbol()
-            atom_idx_begin = begin_atom.GetIdx() + 1
+            atom_idx_begin = begin_atom.GetAtomMapNum() if no_rh else begin_atom.GetIdx() + 1
             atom_symbol_end = end_atom.GetSymbol()
-            atom_idx_end = end_atom.GetIdx() + 1
+            atom_idx_end = end_atom.GetAtomMapNum() if no_rh else end_atom.GetIdx() + 1
 
             pattern_1 = fr"BD\*\(\s+1\)\s*{atom_symbol_begin}\s+{atom_idx_begin}\s+\-\s*{atom_symbol_end}\s+{atom_idx_end}"
             pattern_2 = fr"BD\*\(\s+1\)\s*{atom_symbol_end}\s+{atom_idx_end}\s+\-\s*{atom_symbol_begin}\s+{atom_idx_begin}"
@@ -200,15 +213,15 @@ class ParameterExtractor:
                 if re.search(pattern_1, line):
                     bond_occupancy = str.split(line)[-3]
                     bond_energy = str.split(line)[-2]
-                    bond.SetProp(Property.ANTIBOND_OCCUPANCY.value, bond_occupancy)
-                    bond.SetProp(Property.ANTIBOND_ENERGY.value, bond_energy)
+                    bond.SetProp(prop_occ, bond_occupancy)
+                    bond.SetProp(prop_eng, bond_energy)
                     found = True
                     break
                 elif re.search(pattern_2, line):
                     bond_occupancy = str.split(line)[-3]
                     bond_energy = str.split(line)[-2]
-                    bond.SetProp(Property.ANTIBOND_OCCUPANCY.value, bond_occupancy)
-                    bond.SetProp(Property.ANTIBOND_ENERGY.value, bond_energy)
+                    bond.SetProp(prop_occ, bond_occupancy)
+                    bond.SetProp(prop_eng, bond_energy)
                     found = True
                     break
             if not found and self.__verbose:
@@ -364,4 +377,4 @@ class AtomOnPlaneException(Exception):
 
 
 if __name__ == "__main__":
-    comp = ParameterExtractor("./out/spe/l_13_SPE.out")
+    comp = ParameterExtractor(path="./out/spe/l_2_SPE.out",  no_rh_path="./out/spe_no_rh/l_2_SPE_NoRh.out")
