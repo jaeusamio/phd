@@ -1,0 +1,188 @@
+l_10: Parameter extraction started.
+l_11: Parameter extraction started.
+l_12: Parameter extraction started.
+l_13: Parameter extraction started.
+l_14: Parameter extraction started.
+l_15: Parameter extraction started.
+BOND_OCCUPANCY not found for bond Rh 52 - P 51
+BOND_ENERGY not found for bond Rh 52 - P 51
+ANTIBOND_OCCUPANCY not found for bond Rh 52 - P 51
+ANTIBOND_ENERGY not found for bond Rh 52 - P 51
+l_16: Parameter extraction started.
+l_17: Parameter extraction started.
+l_18: Parameter extraction started.
+LONE_PAIR_OCCUPANCY_NO_RH_1 not found for atom P 1
+LONE_PAIR_ENERGY_NO_RH_1 not found for atom P 1
+LONE_PAIR_S_ORBITAL_NO_RH not found for atom P 1
+l_19: Parameter extraction started.
+l_1: Parameter extraction started.
+l_20b: Parameter extraction started.
+l_21: Parameter extraction started.
+l_22: Parameter extraction started.
+l_23: Parameter extraction started.
+l_24: Parameter extraction started.
+l_25: Parameter extraction started.
+l_26: Parameter extraction started.
+BOND_OCCUPANCY not found for bond Rh 41 - P 37
+BOND_ENERGY not found for bond Rh 41 - P 37
+ANTIBOND_OCCUPANCY not found for bond Rh 41 - P 37
+ANTIBOND_ENERGY not found for bond Rh 41 - P 37
+l_27: Parameter extraction started.
+l_28: Parameter extraction started.
+l_29: Parameter extraction started.
+l_2: Parameter extraction started.
+l_30: Parameter extraction started.
+l_31: Parameter extraction started.
+l_32a: Parameter extraction started.
+l_33c: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond P 67 - O 65
+BOND_ENERGY_NO_RH not found for bond P 67 - O 65
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 67 - O 65
+ANTIBOND_ENERGY_NO_RH not found for bond P 67 - O 65
+l_34: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond O 3 - P 0
+BOND_OCCUPANCY_NO_RH not found for bond O 4 - P 1
+BOND_ENERGY_NO_RH not found for bond O 3 - P 0
+BOND_ENERGY_NO_RH not found for bond O 4 - P 1
+ANTIBOND_OCCUPANCY_NO_RH not found for bond O 3 - P 0
+ANTIBOND_OCCUPANCY_NO_RH not found for bond O 4 - P 1
+ANTIBOND_ENERGY_NO_RH not found for bond O 3 - P 0
+ANTIBOND_ENERGY_NO_RH not found for bond O 4 - P 1
+l_35: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond O 3 - P 0
+BOND_OCCUPANCY_NO_RH not found for bond O 4 - P 1
+BOND_ENERGY_NO_RH not found for bond O 3 - P 0
+BOND_ENERGY_NO_RH not found for bond O 4 - P 1
+ANTIBOND_OCCUPANCY_NO_RH not found for bond O 3 - P 0
+ANTIBOND_OCCUPANCY_NO_RH not found for bond O 4 - P 1
+ANTIBOND_ENERGY_NO_RH not found for bond O 3 - P 0
+ANTIBOND_ENERGY_NO_RH not found for bond O 4 - P 1
+l_36: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond O 3 - P 0
+BOND_OCCUPANCY_NO_RH not found for bond O 4 - P 1
+BOND_ENERGY_NO_RH not found for bond O 3 - P 0
+BOND_ENERGY_NO_RH not found for bond O 4 - P 1
+ANTIBOND_OCCUPANCY_NO_RH not found for bond O 3 - P 0
+ANTIBOND_OCCUPANCY_NO_RH not found for bond O 4 - P 1
+ANTIBOND_ENERGY_NO_RH not found for bond O 3 - P 0
+ANTIBOND_ENERGY_NO_RH not found for bond O 4 - P 1
+l_37c: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond O 3 - P 0
+BOND_OCCUPANCY_NO_RH not found for bond O 4 - P 1
+BOND_ENERGY_NO_RH not found for bond O 3 - P 0
+BOND_ENERGY_NO_RH not found for bond O 4 - P 1
+ANTIBOND_OCCUPANCY_NO_RH not found for bond O 3 - P 0
+ANTIBOND_OCCUPANCY_NO_RH not found for bond O 4 - P 1
+ANTIBOND_ENERGY_NO_RH not found for bond O 3 - P 0
+ANTIBOND_ENERGY_NO_RH not found for bond O 4 - P 1
+l_38: Parameter extraction started.
+l_39: Parameter extraction started.
+l_3: Parameter extraction started.
+l_40: Parameter extraction started.
+l_41: Parameter extraction started.
+l_42: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond O 3 - P 0
+BOND_OCCUPANCY_NO_RH not found for bond O 4 - P 1
+BOND_ENERGY_NO_RH not found for bond O 3 - P 0
+BOND_ENERGY_NO_RH not found for bond O 4 - P 1
+ANTIBOND_OCCUPANCY_NO_RH not found for bond O 3 - P 0
+ANTIBOND_OCCUPANCY_NO_RH not found for bond O 4 - P 1
+ANTIBOND_ENERGY_NO_RH not found for bond O 3 - P 0
+ANTIBOND_ENERGY_NO_RH not found for bond O 4 - P 1
+l_43: Parameter extraction started.
+l_44: Parameter extraction started.
+l_45: Parameter extraction started.
+l_46: Parameter extraction started.
+l_47: Parameter extraction started.
+l_48: Parameter extraction started.
+l_49: Parameter extraction started.
+l_4: Parameter extraction started.
+l_50: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond P 77 - O 75
+BOND_OCCUPANCY_NO_RH not found for bond P 77 - O 74
+BOND_ENERGY_NO_RH not found for bond P 77 - O 75
+BOND_ENERGY_NO_RH not found for bond P 77 - O 74
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 77 - O 75
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 77 - O 74
+ANTIBOND_ENERGY_NO_RH not found for bond P 77 - O 75
+ANTIBOND_ENERGY_NO_RH not found for bond P 77 - O 74
+BOND_OCCUPANCY_NO_RH not found for bond P 77 - N 73
+BOND_ENERGY_NO_RH not found for bond P 77 - N 73
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 77 - N 73
+ANTIBOND_ENERGY_NO_RH not found for bond P 77 - N 73
+l_51b: Parameter extraction started.
+l_52: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond P 57 - O 55
+BOND_OCCUPANCY_NO_RH not found for bond P 57 - O 54
+BOND_ENERGY_NO_RH not found for bond P 57 - O 55
+BOND_ENERGY_NO_RH not found for bond P 57 - O 54
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 57 - O 55
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 57 - O 54
+ANTIBOND_ENERGY_NO_RH not found for bond P 57 - O 55
+ANTIBOND_ENERGY_NO_RH not found for bond P 57 - O 54
+l_53: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond P 55 - O 53
+BOND_OCCUPANCY_NO_RH not found for bond P 55 - O 52
+BOND_ENERGY_NO_RH not found for bond P 55 - O 53
+BOND_ENERGY_NO_RH not found for bond P 55 - O 52
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 55 - O 53
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 55 - O 52
+ANTIBOND_ENERGY_NO_RH not found for bond P 55 - O 53
+ANTIBOND_ENERGY_NO_RH not found for bond P 55 - O 52
+l_57a: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond P 90 - O 89
+BOND_ENERGY_NO_RH not found for bond P 90 - O 89
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 90 - O 89
+ANTIBOND_ENERGY_NO_RH not found for bond P 90 - O 89
+l_58: Parameter extraction started.
+l_59: Parameter extraction started.
+l_5: Parameter extraction started.
+l_60: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond P 61 - O 59
+BOND_OCCUPANCY_NO_RH not found for bond P 61 - O 58
+BOND_ENERGY_NO_RH not found for bond P 61 - O 59
+BOND_ENERGY_NO_RH not found for bond P 61 - O 58
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 61 - O 59
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 61 - O 58
+ANTIBOND_ENERGY_NO_RH not found for bond P 61 - O 59
+ANTIBOND_ENERGY_NO_RH not found for bond P 61 - O 58
+l_61: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond P 54 - O 52
+BOND_OCCUPANCY_NO_RH not found for bond P 54 - O 51
+BOND_ENERGY_NO_RH not found for bond P 54 - O 52
+BOND_ENERGY_NO_RH not found for bond P 54 - O 51
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 54 - O 52
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 54 - O 51
+ANTIBOND_ENERGY_NO_RH not found for bond P 54 - O 52
+ANTIBOND_ENERGY_NO_RH not found for bond P 54 - O 51
+l_62: Parameter extraction started.
+l_63: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond O 74 - P 72
+BOND_ENERGY_NO_RH not found for bond O 74 - P 72
+ANTIBOND_OCCUPANCY_NO_RH not found for bond O 74 - P 72
+ANTIBOND_ENERGY_NO_RH not found for bond O 74 - P 72
+l_64a: Parameter extraction started.
+l_65b: Parameter extraction started.
+l_6: Parameter extraction started.
+l_72: Parameter extraction started.
+l_73: Parameter extraction started.
+l_74: Parameter extraction started.
+l_75: Parameter extraction started.
+l_76: Parameter extraction started.
+BOND_OCCUPANCY_NO_RH not found for bond P 63 - O 61
+BOND_ENERGY_NO_RH not found for bond P 63 - O 61
+ANTIBOND_OCCUPANCY_NO_RH not found for bond P 63 - O 61
+ANTIBOND_ENERGY_NO_RH not found for bond P 63 - O 61
+l_77: Parameter extraction started.
+l_78: Parameter extraction started.
+l_7: Parameter extraction started.
+l_83: Parameter extraction started.
+l_84: Parameter extraction started.
+l_85: Parameter extraction started.
+l_86: Parameter extraction started.
+l_89: Parameter extraction started.
+l_8: Parameter extraction started.
+l_90: Parameter extraction started.
+l_91: Parameter extraction started.
+l_92: Parameter extraction started.
+l_9b: Parameter extraction started.
