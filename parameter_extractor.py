@@ -237,6 +237,7 @@ class ParameterExtractor:
                 print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Antibond not found")
 
     def __set_lone_pair_prop(self, no_rh: bool) -> None:
+        # FIXME: LP occ and LP eng parameter extraction is not working properly, it returns unwanted chars (")", "d", "%")
         bond_occupancy_blocks = self.__extract_bond_occupancy_blocks(no_rh=no_rh)
 
         for atom in self.mol.GetAtoms():
