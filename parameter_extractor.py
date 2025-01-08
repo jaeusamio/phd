@@ -69,6 +69,7 @@ class ParameterExtractor:
             self.__set_antibond_prop(no_rh=True)
             self.__set_nmr_property(no_rh=True)
             self.__set_lone_pair_prop(no_rh=True)
+            self.__set_lone_pair_orbital_distribution()
             self.homo_no_rh, self.lumo_no_rh = self.__get_homo_lumo(no_rh=True)
             self.dipole_no_rh = self.__get_dipole(no_rh=True)
 
@@ -118,6 +119,12 @@ class ParameterExtractor:
     def __extract_bond_occupancy_blocks(self, no_rh: bool) -> list[list[str]]:
         start_pattern = r"Natural Bond Orbitals \(Summary\)\:"
         end_pattern = r"NATURAL LOCALIZED MOLECULAR ORBITAL \(NLMO\) ANALYSIS"
+        bond_occupancy_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, no_rh)
+        return bond_occupancy_blocks
+
+    def __extract_orbital_occupancy_blocks(self, no_rh: bool) -> list[list[str]]:
+        start_pattern = r"\(Occupancy\)   Bond orbital\/ Coefficients\/ Hybrids"
+        end_pattern = r"NHO Directionality and \"Bond Bending\" \(deviations from line of nuclear centers\)"
         bond_occupancy_blocks = self.__extract_blocks_from_out(start_pattern, end_pattern, no_rh)
         return bond_occupancy_blocks
 
@@ -254,6 +261,60 @@ class ParameterExtractor:
 
                 match_found = False
                 for line in bond_occupancy_blocks[-1]:
+                    if re.search(pattern, line):
+                        lp_occupancy = str.split(line)[-3]
+                        lp_energy = str.split(line)[-2]
+                        atom.SetProp(prop_occ, lp_occupancy)
+                        atom.SetProp(prop_eng, lp_energy)
+                        count += 1
+                        match_found = True
+                        break
+                if not match_found:
+                    finished = True
+
+    def __set_lone_pair_orbital_distribution(self) -> None:
+        """
+        Extract the percentage of orbital occupancy of each lone of the molecule.
+        Currently only for no_rh version, meaning that it will only get the values for P atoms.
+        """
+        orbital_occupancy_blocks = self.__extract_orbital_occupancy_blocks(no_rh=True)
+
+        for atom in self.mol.GetAtoms():
+            atom_symbol = atom.GetSymbol()
+            atom_idx = atom.GetAtomMapNum()
+
+            pattern = f"\s+LP\s+\(\s+1\)\s*{atom_symbol}\s+{atom_idx}\s+s\("
+            for line in orbital_occupancy_blocks[-1]:
+                if re.search(pattern, line):
+                    orbital_occ_raw_list = str.split(line)[-5:]
+                    s, p, d = [
+                        re.search(r'\d+\.\d+(?=%)', item).group()
+                        for item in orbital_occ_raw_list
+                        if re.search(r'\d+\.\d+(?=%)', item)
+                    ]
+                    atom.SetProp(Property.LONE_PAIR_S_ORBITAL_NO_RH.value, s)
+                    atom.SetProp(Property.LONE_PAIR_P_ORBITAL_NO_RH.value, p)
+                    atom.SetProp(Property.LONE_PAIR_D_ORBITAL_NO_RH.value, d)
+                    break
+
+            finished = False
+            count = 1
+
+            while finished is False:
+                pattern = fr"LP\s\(\s+{count}\)\s*{atom_symbol}\s+{atom_idx}"
+
+                # For Rh complexes, no more than 4 LP orbitals will be found
+                prop_occ = getattr(
+                    Property,
+                    f"LONE_PAIR_OCCUPANCY{'_NO_RH'}_{min(count, 4)}"
+                ).value
+                prop_eng = getattr(
+                    Property,
+                    f"LONE_PAIR_ENERGY{'_NO_RH'}_{min(count, 4)}"
+                ).value
+
+                match_found = False
+                for line in orbital_occupancy_blocks[-1]:
                     if re.search(pattern, line):
                         lp_occupancy = str.split(line)[-3]
                         lp_energy = str.split(line)[-2]
@@ -438,6 +499,12 @@ class Property(Enum):
     LONE_PAIR_ENERGY_NO_RH_2 = "lone_pair_energy_no_rh_2"
     LONE_PAIR_ENERGY_NO_RH_3 = "lone_pair_energy_no_rh_3"
     LONE_PAIR_ENERGY_NO_RH_4 = "lone_pair_energy_no_rh_4"
+    # LONE_PAIR_S_ORBITAL = "lone_pair_s_orbital"
+    # LONE_PAIR_P_ORBITAL = "lone_pair_p_orbital"
+    # LONE_PAIR_D_ORBITAL = "lone_pair_d_orbital"
+    LONE_PAIR_S_ORBITAL_NO_RH = "lone_pair_s_orbital_no_rh"
+    LONE_PAIR_P_ORBITAL_NO_RH = "lone_pair_p_orbital_no_rh"
+    LONE_PAIR_D_ORBITAL_NO_RH = "lone_pair_d_orbital_no_rh"
     NMR_ISOTROPIC = "nmr_isotropic"
     NMR_ISOTROPIC_NO_RH = "nmr_isotropic_no_rh"
     NMR_ANISOTROPIC = "nmr_anisotropic"
