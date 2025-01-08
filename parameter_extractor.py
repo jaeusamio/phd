@@ -562,4 +562,5 @@ class AtomOnPlaneException(Exception):
 
 
 if __name__ == "__main__":
-    comp = ParameterExtractor(path="./out/spe/l_2_SPE.out",  no_rh_path="./out/spe_no_rh/l_2_SPE_NoRh.out")
+    ligand = "l_2"
+    comp = ParameterExtractor(path=f"./out/spe/{ligand}_SPE.out", no_rh_path=f"./out/spe_no_rh/{ligand}_SPE_NoRh.out")
