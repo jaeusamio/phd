@@ -415,6 +415,12 @@ class ParameterExtractor:
         return self.mol.GetBondBetweenAtoms(atom_1.GetIdx(), atom_2.GetIdx())
 
     def __get_p_substituents(self, p: Chem.Atom) -> (Chem.Atom, Chem.Atom):
+        """
+        Gets the substituents on the P atom, not including the bridge.
+
+        :param p: The phosphorus atom.
+        :return: A tuple with the substituent atoms, ordered by the distance to the P-Rh-P plane.
+        """
         substituents = list(filter(
             lambda x: x.GetIdx() != self.bridge.GetIdx() and x.GetSymbol() != "Rh" and x.GetSymbol() != "P",
             p.GetNeighbors())
