@@ -5,6 +5,7 @@ import rdkit.Chem as Chem
 from openbabel import pybel
 from rdkit.Chem import rdMolTransforms
 from rdkit.Chem import rdDetermineBonds
+from morfeus.buried_volume import BuriedVolume
 
 
 class ParameterExtractor:
@@ -329,6 +330,28 @@ class ParameterExtractor:
         d = np.dot(normal, p_atom - p1)
 
         return d
+
+    def buried_volume(self, radius: float) -> BuriedVolume:
+        atoms = self.mol.GetAtoms()
+        elements = [a.GetSymbol() for a in atoms]
+        metal_index = self.rh.GetIdx() + 1
+        conformer = self.mol.GetConformer()
+        coordinates = [np.array([coord.x, coord.y, coord.z]) for coord in
+                       (conformer.GetAtomPosition(a.GetIdx()) for a in atoms)]
+        excluded_atoms = [at.GetIdx() + 1 for at in self.cod]
+        return BuriedVolume(
+            elements=elements,
+            coordinates=coordinates,
+            metal_index=metal_index,
+            excluded_atoms=excluded_atoms,
+            include_hs=True,
+            radius=radius,
+            z_axis_atoms=[self.p1.GetIdx() + 1, self.p2.GetIdx() + 1],
+            xz_plane_atoms=[self.p2.GetIdx() + 1]
+        )
+
+    def get_bond(self, atom_1: Chem.Atom, atom_2: Chem.Atom) -> Chem.Bond:
+        return self.mol.GetBondBetweenAtoms(atom_1.GetIdx(), atom_2.GetIdx())
 
     def __get_p_substituents(self, p: Chem.Atom) -> (Chem.Atom, Chem.Atom):
         substituents = list(filter(
