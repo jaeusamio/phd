@@ -477,6 +477,34 @@ class ParameterExtractor:
         c3, c4 = list(map(lambda x: x[0], plane_distance_sorted))
         return c1, c2, c3, c4
 
+    def get_prop_wrapper(self, prop_name):
+        if not isinstance(prop_name, Property):
+            raise TypeError('prop_name must be an instance of Property Enum')
+
+        try:
+            return self.GetProp(prop_name.value)
+        except KeyError:
+            if isinstance(self, Chem.Atom):
+                print(
+                    f"{bcolors.FAIL}"
+                    f"{str.upper(prop_name.value)} not found for atom {self.GetSymbol()} {self.GetIdx()}"
+                    f"{bcolors.ENDC}"
+                )
+            if isinstance(self, Chem.Bond):
+                begin_atom_symbol = self.GetBeginAtom().GetSymbol()
+                begin_atom_idx = self.GetBeginAtom().GetIdx()
+                end_atom_symbol = self.GetEndAtom().GetSymbol()
+                end_atom_idx = self.GetEndAtom().GetIdx()
+                print(
+                    f"{bcolors.FAIL}"
+                    f"{str.upper(prop_name.value)}"
+                    f" not found for bond {begin_atom_symbol} {begin_atom_idx} - {end_atom_symbol} {end_atom_idx}"
+                    f"{bcolors.ENDC}"
+                )
+
+    Chem.Atom.get_prop = get_prop_wrapper
+    Chem.Bond.get_prop = get_prop_wrapper
+
 
 class Property(Enum):
     CHARGE = "nbo_charge"
