@@ -185,15 +185,13 @@ class ParameterExtractor:
 
             for line in bond_occupancy_blocks[-1]:
                 if re.search(pattern_1, line):
-                    bond_occupancy = str.split(line)[-3]
-                    bond_energy = str.split(line)[-2]
+                    bond_occupancy, bond_energy = re.findall(r'\b\d+\.\d+\b', line)
                     bond.SetProp(prop_occ, bond_occupancy)
                     bond.SetProp(prop_eng, bond_energy)
                     found = True
                     break
                 elif re.search(pattern_2, line):
-                    bond_occupancy = str.split(line)[-3]
-                    bond_energy = str.split(line)[-2]
+                    bond_occupancy, bond_energy = re.findall(r'\b\d+\.\d+\b', line)
                     bond.SetProp(prop_occ, bond_occupancy)
                     bond.SetProp(prop_eng, bond_energy)
                     found = True
@@ -220,15 +218,13 @@ class ParameterExtractor:
 
             for line in bond_occupancy_blocks[-1]:
                 if re.search(pattern_1, line):
-                    bond_occupancy = str.split(line)[-3]
-                    bond_energy = str.split(line)[-2]
+                    bond_occupancy, bond_energy = re.findall(r'\b\d+\.\d+\b', line)
                     bond.SetProp(prop_occ, bond_occupancy)
                     bond.SetProp(prop_eng, bond_energy)
                     found = True
                     break
                 elif re.search(pattern_2, line):
-                    bond_occupancy = str.split(line)[-3]
-                    bond_energy = str.split(line)[-2]
+                    bond_occupancy, bond_energy = re.findall(r'\b\d+\.\d+\b', line)
                     bond.SetProp(prop_occ, bond_occupancy)
                     bond.SetProp(prop_eng, bond_energy)
                     found = True
@@ -237,7 +233,6 @@ class ParameterExtractor:
                 print(atom_symbol_begin, atom_idx_begin, "-", atom_symbol_end, atom_idx_end, ": Antibond not found")
 
     def __set_lone_pair_prop(self, no_rh: bool) -> None:
-        # FIXME: LP occ and LP eng parameter extraction is not working properly, it returns unwanted chars (")", "d", "%")
         bond_occupancy_blocks = self.__extract_bond_occupancy_blocks(no_rh=no_rh)
 
         for atom in self.mol.GetAtoms():
@@ -275,7 +270,7 @@ class ParameterExtractor:
 
     def __set_lone_pair_orbital_distribution(self) -> None:
         """
-        Extract the percentage of orbital occupancy of each lone of the molecule.
+        Extract the percentage of orbital occupancy of each lone pair of the molecule.
         Currently only for no_rh version, meaning that it will only get the values for P atoms.
         """
         orbital_occupancy_blocks = self.__extract_orbital_occupancy_blocks(no_rh=True)
@@ -297,35 +292,6 @@ class ParameterExtractor:
                     atom.SetProp(Property.LONE_PAIR_P_ORBITAL_NO_RH.value, p)
                     atom.SetProp(Property.LONE_PAIR_D_ORBITAL_NO_RH.value, d)
                     break
-
-            finished = False
-            count = 1
-
-            while finished is False:
-                pattern = fr"LP\s\(\s+{count}\)\s*{atom_symbol}\s+{atom_idx}"
-
-                # For Rh complexes, no more than 4 LP orbitals will be found
-                prop_occ = getattr(
-                    Property,
-                    f"LONE_PAIR_OCCUPANCY{'_NO_RH'}_{min(count, 4)}"
-                ).value
-                prop_eng = getattr(
-                    Property,
-                    f"LONE_PAIR_ENERGY{'_NO_RH'}_{min(count, 4)}"
-                ).value
-
-                match_found = False
-                for line in orbital_occupancy_blocks[-1]:
-                    if re.search(pattern, line):
-                        lp_occupancy = str.split(line)[-3]
-                        lp_energy = str.split(line)[-2]
-                        atom.SetProp(prop_occ, lp_occupancy)
-                        atom.SetProp(prop_eng, lp_energy)
-                        count += 1
-                        match_found = True
-                        break
-                if not match_found:
-                    finished = True
 
     def __get_homo_lumo(self, no_rh: bool) -> (float, float):
         orbital_blocks = self.__extract_orbital_blocks(no_rh)
@@ -563,5 +529,5 @@ class AtomOnPlaneException(Exception):
 
 
 if __name__ == "__main__":
-    ligand = "l_2"
+    ligand = "l_10"
     comp = ParameterExtractor(path=f"./out/spe/{ligand}_SPE.out", no_rh_path=f"./out/spe_no_rh/{ligand}_SPE_NoRh.out")
